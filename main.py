@@ -1,5 +1,6 @@
 import pygame as pg
 import random
+import controller
 
 COLOR_DICT = {"background": (250, 248, 238, 1), "container": (187, 173, 160, 1),
               "grid": (205, 193, 180, 1), }
@@ -28,11 +29,11 @@ class Cell(pg.sprite.Sprite):
     def set_score(self, score):
         self.score = score
         if score != 0:
-            font = pg.font.Font(None, 84)
-            t_score = font.render(f"{score}", True, COLOR_FONT_DICT[score])
+            font = pg.font.Font(None, 70)
+            t_score = font.render(f"{score}", True, COLOR_FONT_DICT[min(score, 2048)])
             t_score_pos = t_score.get_rect(center=(self.rect.size[0] / 2, self.rect.size[1] / 2 + 5))
             self.image = pg.Surface(self.rect.size).convert()
-            self.image.fill(COLOR_SCORE_DICT[score])
+            self.image.fill(COLOR_SCORE_DICT[min(score, 2048)])
             self.image.blit(t_score, t_score_pos)
         else:
             self.image = pg.Surface(self.rect.size).convert()
@@ -47,77 +48,20 @@ def drawUI():
             grid.center = s_center[0] + 109.5 * i, s_center[1] + 109.5 * j
             pg.draw.rect(background, COLOR_DICT["grid"], grid, border_radius=3)
 
-
-def randscore(score):
-    valid_pos = []
-    for i in range(4):
-        for j in range(4):
-            if score[i][j] == 0:
-                valid_pos.append((i, j))
-    random.shuffle(valid_pos)
-    if len(valid_pos) > 0:
-        score[valid_pos[0][0]][valid_pos[0][1]] = random.choice([2, 4])
-    return score
-
-
-def updateboard(score, key):
-    dscore = 0
-    is_move = False
-    ktype = 0
-
-    def _update(dscore, is_move):
-        for i in range(4):
-            for j in range(1, 4):
-                if score[i][j] != 0:
-                    print(i, j)
-                    k = j
-                    while k != 0 and score[i][k - 1] == 0:
-                        print(f"{(i, k-1, score[i][k-1])} <- {(i, k, score[i][k])}")
-                        score[i][k - 1] = score[i][k]
-                        score[i][k] = 0
-                        k = k-1
-                        print(score)
-                        if k != 0:
-                            print(i, k, score[i][k-1])
-                        is_move = True
-                    if k != 0 and score[i][k - 1] == score[i][k]:
-                        dscore = dscore + score[i][k]
-                        score[i][k - 1] *= 2
-                        score[i][k] = 0
-                        is_move = True
-
-        return dscore, is_move
-    def _S():
-        pass
-    def _T1():
-        for i in range(4):
-            for j in range(i):
-                score[i][j], score[j][i] = score[j][i], score[i][j]
-    def _T2():
-        for i in range(4):
-            for j in range(2):
-                score[i][j], score[i][3-j] = score[i][3-j], score[i][j]
-
+def getActionFromKey(key):
     if key == pg.K_a or key == pg.K_LEFT:
-        ktype = 0
+        return 0
     elif key == pg.K_w or key == pg.K_UP:
-        ktype = 1
+        return 1
     elif key == pg.K_d or key == pg.K_RIGHT:
-        ktype = 2
+        return 2
     elif key == pg.K_s or key == pg.K_DOWN:
-        ktype = 3
-
-    [_S, _T1][ktype % 2]()
-    [_S, _T2][(ktype//2) % 2]()
-    dscore, is_move = _update(dscore, is_move)
-    [_S, _T2][(ktype//2) % 2]()
-    [_S, _T1][ktype % 2]()
-    print(ktype)
-
-    return score, is_move, dscore
+        return 3
+    return -1
 
 
 if __name__ == '__main__':
+    py2048 = controller.GameController()
     pg.init()
     screen = pg.display.set_mode((530, 630), pg.SCALED)
     pg.display.set_caption("2048")
@@ -143,10 +87,7 @@ if __name__ == '__main__':
         for j in range(4):
             _cells.add(cell[i][j])
 
-    score = [[0 for j in range(4)] for i in range(4)]
-    score = randscore(score)
-    score = randscore(score)
-    sum_score = 0
+    totscore = 0
     is_end = False
 
     while not is_end:
@@ -156,26 +97,15 @@ if __name__ == '__main__':
             if event.type == pg.QUIT:
                 going = False
             elif event.type == pg.KEYDOWN:
-                sore, is_move, dscore = updateboard(score, event.key)
-                sum_score = sum_score + dscore
-                if is_move:
-                    sore = randscore(score)
-
-        maxscore = 0
-        freecnt = 0
+                _, totscore, is_end = py2048.run(getActionFromKey(event.key))
 
         for i in range(4):
             for j in range(4):
-                cell[i][j].set_score(score[i][j])
-                maxscore = max(score[i][j], maxscore)
-                freecnt = freecnt + (score[i][j] == 0)
-
-        if maxscore == 2048 or freecnt == 0:
-            is_end = True
+                cell[i][j].set_score(py2048._board[i][j])
 
         drawUI()
         font = pg.font.Font(None, 70)
-        t_score = font.render(f"SCORE :  {sum_score}", True, COLOR_FONT_DICT[2])
+        t_score = font.render(f"SCORE :  {totscore}", True, COLOR_FONT_DICT[2])
         t_score_pos = t_score.get_rect(center=(screen.get_width() / 2, 90))
         screen.blit(t_score, t_score_pos)
         _cells.draw(screen)
