@@ -61,9 +61,9 @@ class GameController():
                 if self._board[i][j] == 0:
                     return False
                 if j != 0 and self._board[i][j-1] == self._board[i][j]:
-                    notfree = False
+                    return False
                 if i != 0 and self._board[i-1][j] == self._board[i][j]:
-                    notfree = False
+                    return False
         return True
 
     def run(self, action):
