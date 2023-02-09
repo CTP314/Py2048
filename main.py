@@ -1,6 +1,8 @@
+import imp
 import pygame as pg
 import random
-import controller
+import modules.gameapis.controller as controller
+from algorithm1.agent import Agent
 
 COLOR_DICT = {"background": (250, 248, 238, 1), "container": (187, 173, 160, 1),
               "grid": (205, 193, 180, 1), }
@@ -18,7 +20,7 @@ grid = pg.Rect((0, 0), (97.5, 97.5))
 
 class Cell(pg.sprite.Sprite):
     def __init__(self, center=(0, 0)):
-        super(Cell, self).__init__()
+        super(Cell, self).__init__() 
         self.rect = grid.copy()
         self.rect.center = center
         self.origin_rect = self.rect
@@ -62,6 +64,7 @@ def getActionFromKey(key):
 
 if __name__ == '__main__':
     py2048 = controller.GameController()
+    agent = Agent(py2048._board, py2048._action_space)
     pg.init()
     screen = pg.display.set_mode((530, 630), pg.SCALED)
     pg.display.set_caption("2048")
@@ -99,6 +102,8 @@ if __name__ == '__main__':
             elif event.type == pg.KEYDOWN:
                 _, totscore, is_end = py2048.run(getActionFromKey(event.key))
 
+        # agent.state, totscore, is_end = py2048.run(agent.getAction())
+
         for i in range(4):
             for j in range(4):
                 cell[i][j].set_score(py2048._board[i][j])
@@ -110,5 +115,10 @@ if __name__ == '__main__':
         screen.blit(t_score, t_score_pos)
         _cells.draw(screen)
         pg.display.flip()
+
+        if is_end: 
+            py2048.restart()
+            agent.state = py2048._board
+            is_end = False
 
     pg.quit()
